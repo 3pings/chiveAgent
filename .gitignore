@@ -45,6 +45,7 @@ builds/**/images/*
 *.mp4
 *.png
 *.jpeg
+.envVar.sh
 
 # security / ssl
 *.pem

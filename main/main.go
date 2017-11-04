@@ -1,20 +1,21 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/3pings/acigo/aci"
+	"github.com/3pings/chiveAgent/utility"
 	"log"
 	"os"
 	"time"
 )
 
+var nodeInfo = make(map[string]string)
+
 func main() {
 
-	type nodeData struct {
-		temp string
-	}
-
-	nodeInfo := make(map[string]nodeData)
+	token := os.Getenv("SPARKTOKEN")
+	roomID := os.Getenv("SPARKROOMID")
 
 	// Get environment variables for APIC login
 	debug := os.Getenv("DEBUG") != ""
@@ -27,7 +28,6 @@ func main() {
 
 	defer logout(a)
 
-
 	// display existing nodes
 	nodes, errList := a.NodeList()
 	if errList != nil {
@@ -35,36 +35,8 @@ func main() {
 		return
 	}
 
-	for _, n := range nodes {
-
-		nodeDetails, errList := a.GetTemp(n["dn"].(string))
-		if errList != nil {
-			log.Printf("could not list node details: %v", errList)
-			return
-		}
-
-		for _, d := range nodeDetails {
-			name := n["name"].(string)
-			tempMax := d["currentMax"].(string)
-			nodeRole := n["role"].(string)
-
-			// At this time we do not want the controller info
-			if nodeRole != "controller" {
-				nodeInfo[name] = nodeData{tempMax}
-			}
-		}
-	}
-	//Printing today need to add api call
-	fmt.Println(nodeInfo)
-
-	// Loop through infinitely every X number of seconds
+	// loop through to get temperature data per node
 	for {
-		time.Sleep(60 * time.Second)
-		errRefresh := a.Refresh()
-		if errRefresh != nil {
-			log.Printf("refresh %d/%d error: %v", errRefresh)
-			os.Exit(3)
-		}
 
 		for _, n := range nodes {
 
@@ -81,13 +53,25 @@ func main() {
 
 				// At this time we do not want the controller info
 				if nodeRole != "controller" {
-					nodeInfo[name] = nodeData{tempMax}
+					nodeInfo[name] = tempMax
 				}
 			}
+
+		}
+		//Put results of node data collection into json
+		//Printing today need to add api call
+		jsonNode, _ := json.Marshal(nodeInfo)
+		utility.SendSparkMessage(token, roomID, string(jsonNode))
+
+		// wait a defined number of seconds before looping back through
+		time.Sleep(1 * time.Second)
+		errRefresh := a.Refresh()
+		if errRefresh != nil {
+			log.Println(errRefresh)
+			os.Exit(3)
 		}
 	}
-	//Printing today need to add api call
-	fmt.Println(nodeInfo)
+
 }
 
 func login(debug bool) (*aci.Client, error) {
