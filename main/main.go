@@ -61,7 +61,7 @@ func main() {
 		fmt.Println(nodeInfo)
 
 		// wait a defined number of seconds before looping back through
-		time.Sleep(1 * time.Second)
+		time.Sleep(60 * time.Second)
 		errRefresh := a.Refresh()
 		if errRefresh != nil {
 			log.Println(errRefresh)
