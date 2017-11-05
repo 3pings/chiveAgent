@@ -10,9 +10,9 @@ import (
 	"time"
 )
 
-var nodeInfo = make(map[string]string)
-
 func main() {
+
+	var nodeInfo = make(map[string]string)
 
 	token := os.Getenv("SPARKTOKEN")
 	roomID := os.Getenv("SPARKROOMID")
@@ -39,8 +39,8 @@ func main() {
 	for {
 
 		for _, n := range nodes {
-
-			nodeDetails, errList := a.GetTemp(n["dn"].(string))
+			nRole := n["role"].(string)
+			nodeDetails, errList := a.GetNodeTemp(n["dn"].(string), nRole)
 			if errList != nil {
 				log.Printf("could not list node details: %v", errList)
 				return
@@ -49,12 +49,8 @@ func main() {
 			for _, d := range nodeDetails {
 				name := n["name"].(string)
 				tempMax := d["currentMax"].(string)
-				nodeRole := n["role"].(string)
 
-				// At this time we do not want the controller info
-				if nodeRole != "controller" {
-					nodeInfo[name] = tempMax
-				}
+				nodeInfo[name] = tempMax
 			}
 
 		}
@@ -62,6 +58,7 @@ func main() {
 		//Printing today need to add api call
 		jsonNode, _ := json.Marshal(nodeInfo)
 		utility.SendSparkMessage(token, roomID, string(jsonNode))
+		fmt.Println(nodeInfo)
 
 		// wait a defined number of seconds before looping back through
 		time.Sleep(1 * time.Second)
