@@ -10,9 +10,10 @@ import (
 	"time"
 )
 
+
 func main() {
 
-	var nodeInfo = make(map[string]string)
+	var nodeInfo = make(map[string][]string)
 
 	token := os.Getenv("SPARKTOKEN")
 	roomID := os.Getenv("SPARKROOMID")
@@ -34,12 +35,14 @@ func main() {
 		log.Printf("could not list nodes: %v", errList)
 		return
 	}
-
 	// loop through to get temperature data per node
 	for {
-
 		for _, n := range nodes {
 			nRole := n["role"].(string)
+			cTime, tErr := time.Parse(time.RFC3339, n["currentTime"].(string))
+			if tErr != nil {
+				fmt.Println(tErr)
+			}
 			nodeDetails, errList := a.GetNodeTemp(n["dn"].(string), nRole)
 			if errList != nil {
 				log.Printf("could not list node details: %v", errList)
@@ -47,10 +50,10 @@ func main() {
 			}
 
 			for _, d := range nodeDetails {
-				name := n["name"].(string)
-				tempMax := d["currentMax"].(string)
+				nName := n["name"].(string)
+				nTemp := d["currentMax"].(string)
 
-				nodeInfo[name] = tempMax
+				nodeInfo[nName] = []string{nTemp, cTime.Format("2006-01-02 03:04:05")}
 			}
 
 		}
